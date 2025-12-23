@@ -329,11 +329,24 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while uploading cover image");
   }
 
+  const userWithoutUpdation = await User.findById(req.user?._id);
+  const oldCoverImageUrl = userWithoutUpdation?.coverImage;
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     { $set: { coverImage: coverImage.url } },
     { new: true }
   ).select("-password");
+
+  // todo : delete old cover image from cloudinary
+  if (oldCoverImageUrl) {
+    try {
+      const publicId = oldCoverImageUrl.split('/').pop().split('.')[0];
+      await deleteFromCloudinary(publicId);
+    } catch (error) {
+      console.log("Error deleting old cover image from Cloudinary: ", error);
+    } 
+  }
 
   return res
     .status(200)
