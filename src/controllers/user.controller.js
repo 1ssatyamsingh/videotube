@@ -51,6 +51,7 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   // check for images, check for avatar
+  //optional chain 
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
   // const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
@@ -93,7 +94,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // return response
   return res.status(201).json(
-    new ApiResponse(200,createdUser,"User registered successfully")
+    new ApiResponse(201,createdUser,"User registered successfully")
    );
 
 });

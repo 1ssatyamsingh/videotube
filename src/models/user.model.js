@@ -10,7 +10,7 @@ const userSchema = new Schema(
         unique: true,
         lowercase: true,
         trim: true,
-        index: true,
+        index: true,// to make it searching in that field optimized
     },
     email: {
         type: String,
@@ -47,30 +47,52 @@ const userSchema = new Schema(
     timestamps: true,
 }); 
 
-userSchema.pre("save", async function () {
-  if(this.isModified("password")){
-    this.password = await bcrypt.hash(this.password,10);
-  }
-})
+// Runs automatically BEFORE saving a user document in MongoDB
+userSchema.pre("save", async function (next) {
 
+  // If password is NOT changed  then skip hashing and continue saving normally
+  if (!this.isModified("password")) return next();
+
+  // If password is changed or user is new, hash the plain password before saving
+  this.password = await bcrypt.hash(this.password, 10);
+
+  // Continue the save operation
+  next();
+});
+
+
+// Custom instance method for checking password during login
 userSchema.methods.isPasswordCorrect = async function (password) {
-  return await bcrypt.compare(password,this.password)
-}
 
-userSchema.methods.generateAccessToken = function(){
+  // Compare entered password (plain text) with stored hashed password
+  // bcrypt.compare() returns true/false
+  return await bcrypt.compare(password, this.password);
+};
+
+
+// Instance method: generates a short-lived JWT Access Token
+// This token is used for authenticating API requests (protected routes)
+userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
+      // Payload (data stored inside the token)
+      // You can access this later using jwt.verify()
       _id: this._id,
       email: this.email,
       username: this.username,
-      fullName: this.fullName, 
+      fullName: this.fullName,
     },
+
+    // Secret key used to sign the token (must be kept private)
     process.env.ACCESS_TOKEN_SECRET,
+
     {
-      expiresIn: process.env.ACESS_TOKEN_EXPIRY,
+      // Token expiry time (example: "15m", "1h", "7d")
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
     }
-  )
-}
+  );
+};
+
 
 userSchema.methods.generateRefreshToken = function(){
     return jwt.sign(
